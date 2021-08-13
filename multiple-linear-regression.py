@@ -4,16 +4,16 @@
 # In[1]:
 
 
-get_ipython().system('pip install numpy')
-get_ipython().system('pip install pandas')
-get_ipython().system('pip install matplotlib')
-get_ipython().system('pip install sklearn')
-get_ipython().system('pip install dmba')
-get_ipython().system('pip install statsmodels')
-get_ipython().system('pip install sklearn')
+# !pip install numpy
+# !pip install pandas
+# !pip install matplotlib
+# !pip install sklearn
+# !pip install dmba
+# !pip install statsmodels
+# !pip install yellowbrick
 
 
-# In[3]:
+# In[2]:
 
 
 import pandas as pd
@@ -23,7 +23,7 @@ df = pd.read_csv("data/medical_clean.csv")
 outcome = 'TotalCharge'
 
 df = df.drop(['CaseOrder', 'Customer_id', 'Interaction', 'UID', 'City', 
-         'State', 'County', 'Zip', 'Lat', 'Lng', 'Interaction', 'TimeZone'], axis=1)
+         'State', 'County', 'Zip', 'Lat', 'Lng', 'Interaction', 'TimeZone', 'Additional_charges'], axis=1)
 
 cat_columns = df.select_dtypes(exclude="number").columns
 
@@ -35,7 +35,7 @@ for col in cat_columns:
 df.head()
 
 
-# In[6]:
+# In[3]:
 
 
 # export prepared data
@@ -44,7 +44,7 @@ df.to_csv('data/medical_prepared.csv')
 
 # # Univariate Analysis
 
-# In[7]:
+# In[4]:
 
 
 import matplotlib.pyplot as plt
@@ -53,7 +53,7 @@ import seaborn as sns
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 
-# In[8]:
+# In[5]:
 
 
 # perform univariate analysis on all columns
@@ -62,7 +62,7 @@ for col in df.columns:
     plt.hist(df[col])
     plt.title(col)
     
-    path = 'plots/%s.png'%col
+    path = 'plots/univariate-%s.png'%col
     plt.gcf().savefig(path)
     plt.show()
 
@@ -71,14 +71,14 @@ for col in df.columns:
 # 
 # Since we are predicting Initial_days we will include Initial_days in our bivariate analysis of the features
 
-# In[9]:
+# In[6]:
 
 
 for col in df:
     if col != outcome:
         df.plot(kind='scatter', x=outcome, y=col)
         
-        path = 'plots/%s-%s.png'%(outcome,col)
+        path = 'plots/bivariate-%s-%s.png'%(outcome,col)
         plt.gcf().savefig(path)
         plt.show()
 
@@ -102,77 +102,72 @@ abs(df.corr())[outcome].sort_values(ascending=False)
 
 
 fig, ax = plt.subplots(figsize=(15,15))
-sns.heatmap(correl, xticklabels = correl.columns, yticklabels = correl.columns, cmap='RdBu')
+heatmap = sns.heatmap(correl, xticklabels = correl.columns, yticklabels = correl.columns, cmap='RdBu')
+
+heatmap.get_figure().savefig('plots/heatmap.png')
 
 
 # # Regression Models
 # 
 # We start with a regression model with all of the features
 
-# In[20]:
+# In[10]:
 
 
-from sklearn import linear_model
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from dmba import AIC_score
+import statsmodels.api as sm
 
 
-# In[21]:
+# In[11]:
 
 
 X = df.loc[:,df.columns!=outcome]
 y = df[outcome]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.20, random_state=101)
+
+# In[ ]:
 
 
-# In[26]:
 
 
-model = LinearRegression()
-model.fit(X_train, y_train)
 
-print('AIC Score with all variables: %0.3f' % AIC_score(y_test, model.predict(X_test), model))
+# In[12]:
+
+
+Xc = sm.add_constant(X)
+
+initial_model = sm.OLS(y,Xc)
+results = initial_model.fit()
+results.summary()
+
+
+# In[ ]:
+
+
+
 
 
 # ## Data Reduction
 
-# In[27]:
+# In[13]:
 
 
-# from sklearn.model_selection import cross_val_score, ShuffleSplit
-# from sklearn.metrics import make_scorer
-# from sklearn.preprocessing import PolynomialFeatures
+# this section adapted from Chapter4 of "Practical Statistics for Data Scientists" 
+# by Bruce, Bruce, and Gedeck
 
-
-# model = LinearRegression()
-# model.fit(X_train, y_train)
-
-
-
-# cv = ShuffleSplit(n_splits=10, test_size=0.3, random_state=0)
-# cv_score = cross_val_score(model, X, y, cv=cv)
-# print ('Cv score: mean %0.3f std %0.3f' % (np.mean(np.abs(cv_score)), np.std(cv_score)))
-
-
-# In[29]:
-
-
-from dmba import backward_elimination
+from dmba import backward_elimination, AIC_score
+from sklearn.linear_model import LinearRegression
 
 def train_model(variables):
     if len(variables) == 0:
         return None
     model = LinearRegression()
-    model.fit(X_train[variables], y_train)
+    model.fit(X[variables], y)
     return model
 
 def score_model(model, variables):
     if len(variables) == 0:
-        return AIC_score(y_test, [y_test.mean()] * len(y_test), model, df=1)
-    return AIC_score(y_test, model.predict(X_test[variables]), model)
+        return AIC_score(y, model.predict(df[y]))
+    return AIC_score(y, model.predict(X[variables]), model)
 
 best_model, best_variables = backward_elimination(X.columns, train_model, score_model, 
                                                 verbose=True)
@@ -184,15 +179,90 @@ for name, coef in zip(best_variables, best_model.coef_):
     print(f' {name}: {coef}')
 
 
-# In[32]:
+# In[14]:
 
 
+# New dataset with reduced features
 df_reduced = df[best_variables]
 df_reduced.head()
 
 
-# In[33]:
+# In[15]:
 
 
+# export reduced data
 df_reduced.to_csv('data/medical_reduced.csv')
+
+
+# In[ ]:
+
+
+
+
+
+# In[22]:
+
+
+X_reduced = df_reduced.loc[:,df_reduced.columns!=outcome]
+Xc_reduced = sm.add_constant(X_reduced)
+
+model_reduced = sm.OLS(y,Xc_reduced)
+results = model_reduced.fit()
+results.summary()
+
+
+# In[17]:
+
+
+
+
+
+# In[18]:
+
+
+
+
+
+# ## Residuals
+
+# In[24]:
+
+
+from sklearn.linear_model import Lasso, LassoCV, Ridge, RidgeCV
+from sklearn.model_selection import train_test_split
+
+from yellowbrick.regressor import AlphaSelection, PredictionError, ResidualsPlot
+
+
+# In[25]:
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+model = Ridge()
+visualizer = ResidualsPlot(model)
+visualizer.fit(X_train, y_train)
+visualizer.score(X_test, y_test)
+residual = visualizer.poof()
+
+residual.get_figure().savefig('plots/residual-plot.png')
+
+
+# In[20]:
+
+
+model = Lasso()
+visualizer = PredictionError(model)
+
+visualizer.fit(X_train, y_train)
+visualizer.score(X_test, y_test)
+prediction_error = visualizer.poof()
+
+prediction_error.get_figure().savefig('plots/prediction_error.png')
+
+
+# In[ ]:
+
+
+
 
