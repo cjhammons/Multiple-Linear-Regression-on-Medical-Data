@@ -23,7 +23,8 @@ df = pd.read_csv("data/medical_clean.csv")
 outcome = 'TotalCharge'
 
 df = df.drop(['CaseOrder', 'Customer_id', 'Interaction', 'UID', 'City', 
-         'State', 'County', 'Zip', 'Lat', 'Lng', 'Interaction', 'TimeZone', 'Additional_charges'], axis=1)
+             'State', 'County', 'Zip', 'Lat', 'Lng', 'Interaction', 'TimeZone', 
+              'Additional_charges'], axis=1)
 
 cat_columns = df.select_dtypes(exclude="number").columns
 
@@ -42,18 +43,23 @@ df.head()
 df.to_csv('data/medical_prepared.csv')
 
 
+# In[4]:
+
+
+df['Complication_risk']
+
+
 # # Univariate Analysis
 
-# In[4]:
+# In[5]:
 
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-get_ipython().run_line_magic('matplotlib', 'inline')
 
 
-# In[5]:
+# In[6]:
 
 
 # perform univariate analysis on all columns
@@ -64,14 +70,13 @@ for col in df.columns:
     
     path = 'plots/univariate-%s.png'%col
     plt.gcf().savefig(path)
-    plt.show()
 
 
 # # Bivariate Analysis
 # 
 # Since we are predicting Initial_days we will include Initial_days in our bivariate analysis of the features
 
-# In[6]:
+# In[7]:
 
 
 for col in df:
@@ -80,25 +85,24 @@ for col in df:
         
         path = 'plots/bivariate-%s-%s.png'%(outcome,col)
         plt.gcf().savefig(path)
-        plt.show()
 
 
 # ## Correlation Matrix
 
-# In[7]:
+# In[8]:
 
 
 correl = df.corr()
 display(correl)
 
 
-# In[8]:
+# In[9]:
 
 
 abs(df.corr())[outcome].sort_values(ascending=False)
 
 
-# In[9]:
+# In[10]:
 
 
 fig, ax = plt.subplots(figsize=(15,15))
@@ -111,26 +115,20 @@ heatmap.get_figure().savefig('plots/heatmap.png')
 # 
 # We start with a regression model with all of the features
 
-# In[10]:
+# In[11]:
 
 
 import statsmodels.api as sm
 
 
-# In[11]:
+# In[12]:
 
 
 X = df.loc[:,df.columns!=outcome]
 y = df[outcome]
 
 
-# In[ ]:
-
-
-
-
-
-# In[12]:
+# In[13]:
 
 
 Xc = sm.add_constant(X)
@@ -148,43 +146,48 @@ results.summary()
 
 # ## Data Reduction
 
-# In[13]:
-
-
-# this section adapted from Chapter4 of "Practical Statistics for Data Scientists" 
-# by Bruce, Bruce, and Gedeck
-
-from dmba import backward_elimination, AIC_score
-from sklearn.linear_model import LinearRegression
-
-def train_model(variables):
-    if len(variables) == 0:
-        return None
-    model = LinearRegression()
-    model.fit(X[variables], y)
-    return model
-
-def score_model(model, variables):
-    if len(variables) == 0:
-        return AIC_score(y, model.predict(df[y]))
-    return AIC_score(y, model.predict(X[variables]), model)
-
-best_model, best_variables = backward_elimination(X.columns, train_model, score_model, 
-                                                verbose=True)
-
-print()
-print(f'Intercept: {best_model.intercept_:.3f}')
-print('Coefficients:')
-for name, coef in zip(best_variables, best_model.coef_):
-    print(f' {name}: {coef}')
-
-
 # In[14]:
 
 
-# New dataset with reduced features
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
+
+linear_regression = LinearRegression(normalize=False,fit_intercept=True)
+
+Xc = sm.add_constant(X)
+
+
+def r2_est(X,y):
+    return r2_score(y,linear_regression.fit(X,y).predict(X))
+
+r2_impact = list()
+for j in range(X.shape[1]):
+    selection = [i for i in range(X.shape[1]) if i!=j]
+    r2_impact.append(((r2_est(Xc,y) - r2_est(Xc.values [:,selection],y)) ,Xc.columns[j]))
+
+
+best_variables = list()
+
+for imp, varname in sorted(r2_impact, reverse=True):
+    if imp >= 0.0005:
+        best_variables.append(varname)
+    print ('%6.5f %s' %  (imp, varname))
+
+    # New dataset with reduced features
 df_reduced = df[best_variables]
 df_reduced.head()
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
 
 
 # In[15]:
@@ -200,7 +203,7 @@ df_reduced.to_csv('data/medical_reduced.csv')
 
 
 
-# In[22]:
+# In[16]:
 
 
 X_reduced = df_reduced.loc[:,df_reduced.columns!=outcome]
@@ -211,13 +214,7 @@ results = model_reduced.fit()
 results.summary()
 
 
-# In[17]:
-
-
-
-
-
-# In[18]:
+# In[ ]:
 
 
 
@@ -225,7 +222,7 @@ results.summary()
 
 # ## Residuals
 
-# In[24]:
+# In[17]:
 
 
 from sklearn.linear_model import Lasso, LassoCV, Ridge, RidgeCV
@@ -234,7 +231,7 @@ from sklearn.model_selection import train_test_split
 from yellowbrick.regressor import AlphaSelection, PredictionError, ResidualsPlot
 
 
-# In[25]:
+# In[18]:
 
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
@@ -248,7 +245,7 @@ residual = visualizer.poof()
 residual.get_figure().savefig('plots/residual-plot.png')
 
 
-# In[20]:
+# In[19]:
 
 
 model = Lasso()

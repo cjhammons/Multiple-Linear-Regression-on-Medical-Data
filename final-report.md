@@ -18,8 +18,7 @@ Python in Jupyterlab was used to write the code for this analysis. The code can 
 
 ### Libraries
 
-``Numpy`` and ``pandas`` were used for standard dataframe and numerical operations. ``Sklearn`` and ``statsmodels`` were used for building the regression models. ``matplotlib`` and ``yellowbrick`` were used for visualizations. ``dmba`` was used for the purpose of data reduction.
-
+``Numpy`` and ``pandas`` were used for standard dataframe and numerical operations. ``Sklearn`` and ``statsmodels`` were used for building the regression models. ``matplotlib`` and ``yellowbrick`` were used for visualizations. 
 
 # Data Preparation
 
@@ -135,45 +134,35 @@ results.summary()
 
 We'll use a reduction technique called "Backward Elimination", in which we start by training a model with all of our variables then remove variables one by one until we have removed the inconsequential ones.
 
+The code below itterably trains a linear model then scores it using the AIC metric, removing a variable at each step until only the relevant variables are left.
+
 ```python
-# adapted from Chapter4 of "Practical Statistics for Data Scientists" 
-# by Bruce, Bruce, and Gedeck
+# Adapted from lesson 3.3 of predictive modeling notes
+linear_regression = LinearRegression(normalize=False,fit_intercept=True)
 
-from dmba import backward_elimination, AIC_score
-from sklearn.linear_model import LinearRegression
+# Scores a model for a given X, y pair
+def r2_est(X,y):
+    return r2_score(y,linear_regression.fit(X,y).predict(X))
 
-def train_model(variables):
-    if len(variables) == 0:
-        return None
-    model = LinearRegression()
-    model.fit(X[variables], y)
-    return model
+# Make a list of all features and their impact on the r2 score
+r2_impact = list()
+for j in range(X.shape[1]):
+    selection = [i for i in range(X.shape[1]) if i!=j]
+    r2_impact.append(((r2_est(X,y) - r2_est(X.values [:,selection],y)) ,X.columns[j]))
 
-def score_model(model, variables):
-    if len(variables) == 0:
-        return AIC_score(y, model.predict(df[y]))
-    return AIC_score(y, model.predict(X[variables]), model)
-
-best_model, best_variables = backward_elimination(X.columns, train_model, score_model, verbose=True)
+# Make a list of the most impactful features called 'best_variables'
+best_variables = list()
+for imp, varname in sorted(r2_impact, reverse=True):
+    if imp >= 0.001:
+        best_variables.append(varname)
+    print ('%6.3f %s' %  (imp, varname))
 ```
 
 We end up with a reduced variable set consisting of:
-- Income
-- ReAdmis
-- VitD_levels
-- Soft_drink
-- HighBlood
-- Complication_risk
-- Arthritis
-- Diabetes
-- Hyperlipidemia
-- BackPain
-- Anxiety
-- Allergic_rhinitis
-- Reflux_esophagitis
 - Initial_days
-- Item5
-- Item6
+- Complication_risk
+- HighBlood
+- Hyperlipidemia
 
 The reduced set can be found in ``data/medical_reduced.csv``
 
@@ -189,6 +178,8 @@ results.summary()
 ```
 ![](screenshots/reduced.png)
 
+We were able to get similar accuracy with only 4 of the original variables!
+
 ## Residuals
 
 
@@ -203,3 +194,36 @@ residual = visualizer.poof()
 ```
 ![](plots/residual-plot.png)
 
+# Summary
+
+## Coefficients
+
+Here is a table of the coefficients, sorted by absolute value:
+
+Coefficient | Variable 
+--- | ---
+-202.0708 | Complication_risk
+118.2329 | HighBlood
+103.9143 | Hyperlipidemia
+81.8533 | Initial_days
+
+It seems that ``Complication_risk`` is the most influential variable at play.
+
+
+## Regression Equation
+
+```
+TotalCharge = 2633.9585 + 81.8533(Initial_days) + (-202.0708)(Complication_risk) + 118.2329(HighBlood) + 103.9143(Hyperlipidemia)
+```
+
+## Statistical significance
+
+We were able to get within 2 thousandths of the accuracy of the full model with only the 4 variables we reduced too, which is an inconsequential change. With this information we now know that if a hospital wants to estimate the total cost of a visit they need only look at ta patient's Complication risk, whether they have high blood pressure, whether they have Hyperlipidemia, and how many days they are projected to stay.
+
+## Limitations
+
+With only 10,000 patient records to work with there is a chance this model has been biased towards a particular conclusion. For example in another set of patients a different pre-existing condition such as Anxiety may contribute more to total cost.
+
+## Recomendations
+
+Pay close attention to the complication risk, high blood pressure, and Hyperlipidemia in patients as well as how long they are projected to be in the hospital in order to calculate the cost of a visit.
