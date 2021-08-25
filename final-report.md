@@ -12,13 +12,20 @@ We're making the assumption that the data we are using is clean and valid.
 
 Multiple Linear regression is an appropriate technique for this question because we are looking to predict a numerical outcome using many contributing variables.
 
+We shoudl take into account the four assumptions of Multiple Linear Regression:
+1. Variables are normally distributed
+2. There is a linear relationship between the independent and dependent variables
+3. The variables are measured without error
+4. The variables have the same finite variance
+
 ## Tools
 
-Python in Jupyterlab was used to write the code for this analysis. The code can be found in the notebook ``multiple-linear-regression.ipynb`` or in script form in ``multiple-linear-regression.py``.
+Python in Jupyterlab was used to write the code for this analysis. There are many statistics libraries written in python that make what we are planning to do very simple:
+- ``Numpy`` and ``pandas`` for standard dataframe and numerical operations
+- ``Sklearn`` and ``statsmodels`` for building the regression models
+- ``matplotlib``, ``yellowbrick``, and ``sns`` for visualizations. 
 
-### Libraries
-
-``Numpy`` and ``pandas`` were used for standard dataframe and numerical operations. ``Sklearn`` and ``statsmodels`` were used for building the regression models. ``matplotlib`` and ``yellowbrick`` were used for visualizations. 
+The code can be found in the notebook ``multiple-linear-regression.ipynb`` or in script form in ``multiple-linear-regression.py``.
 
 # Data Preparation
 
@@ -52,68 +59,88 @@ for col in cat_columns:
     df[col] = df[col].cat.codes
 ```
 
-Our target variable (``y``) is ``TotalCharge``, and our initial set of predictor variables (``X``) are:
-- Population
-- Area
-- Job
-- Children
-- Age
-- Income
-- Marital
-- Gender
-- ReAdmis
-- VitD_levels
-- Doc_visits
-- Full_meals_eaten
-- vitD_supp
-- Soft_drink
-- Initial_admin
-- HighBlood
-- Stroke
-- Complication_risk
-- Overweight
-- Arthritis
-- Diabetes
-- Hyperlipidemia
-- BackPain
-- Anxiety
-- Allergic_rhinitis
-- Reflux_esophagitis
-- Asthma
-- Services
-- Initial_days
-- Item1
-- Item2
-- Item3
-- Item4
-- Item5
-- Item6
-- Item7
-- Item8
+
+
+## Summary Statistics
+
+We are working with 10,000 observations.
+
+Our target variable (``y``) is ``TotalCharge`` which is a continuous numeric, and our initial set of predictor variables (``X``) are:
+
+Feature | Type
+--- | ---
+Population | numeric
+Area | categorical
+Job | categorical
+Children| numeric
+Age| numeric
+Income| numeric
+Marital| categorical
+Gender| categorical
+ReAdmis| categorical
+VitD_levels| numeric
+Doc_visits| numeric
+Full_meals_eaten| numeric
+vitD_supp| numeric
+Soft_drink| categorical
+Initial_admin| categorical
+HighBlood| categorical
+Stroke| categorical
+Complication_risk| categorical
+Overweight| categorical
+Arthritis| categorical
+Diabetes| categorical
+Hyperlipidemia| categorical
+BackPain| categorical
+Anxiety| categorical
+Allergic_rhinitis| categorical
+Reflux_esophagitis| categorical
+Asthma| categorical
+Services| categorical
+Initial_days| numeric
+Item1| categorical
+Item2| categorical
+Item3| categorical
+Item4| categorical
+Item5| categorical
+Item6| categorical
+Item7| categorical
+Item8| categorical
 
 ```python
-outcome = 'TotalCharge'
+target = 'TotalCharge'
 
-X = df.loc[:,df.columns!=outcome]
-y = df[outcome]
+X = df.loc[:,df.columns!=target]
+y = df[target]
 ```
 There a lot of variables here, but they will be reduced later on.
 
 The modified dataset can be found in ``data/medical_prepared.csv``
+
+### Central Tendancy
+
+We look at the central tendancy of the target as well as one of our predictors, ``VitD_levels``.
+```python
+print('The mean of %s is: %s' % (target, y.mean()))
+print('The mean of %s is: %s' % ('VitD_levels', df['VitD_levels'].mean()))
+```
+Output:
+```bash
+The mean of TotalCharge is: 5312.172768750177
+The mean of VitD_levels is: 17.964261654862938
+```
 
 ## Univariate Analysis
 
 We perform univariate analysis on our variables. Here is the plot for ``VitD_levels``
 ![](./plots/univariate-VitD_levels.png)
 
-This plot as well as the plots for the rest of the univariate analysis can be round in ``plots/`` with the prefix "univariate".
 
 ## Bivariate Analysis
 
 Here is a bivariate plot of ``VitD_levels`` compared to ``TotalCharge``
 ![](./plots/bivariate-TotalCharge-VitD_levels.png)
 
-The rest of the bivariate pltos can be found in ``plots/`` with the prefix "bivariate".
 
 # Models
 
@@ -169,7 +196,7 @@ The reduced set can be found in ``data/medical_reduced.csv``
 ### The Reduced Model
 
 ```python
-X_reduced = df_reduced.loc[:,df_reduced.columns!=outcome]
+X_reduced = df_reduced.loc[:,df_reduced.columns!=target]
 Xc_reduced = sm.add_constant(X_reduced)
 
 model_reduced = sm.OLS(y,Xc_reduced)
