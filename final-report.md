@@ -12,7 +12,7 @@ We're making the assumption that the data we are using is clean and valid.
 
 Multiple Linear regression is an appropriate technique for this question because we are looking to predict a numerical outcome using many contributing variables.
 
-We shoudl take into account the four assumptions of Multiple Linear Regression:
+We should take into account the four assumptions of Multiple Linear Regression:
 1. Variables are normally distributed
 2. There is a linear relationship between the independent and dependent variables
 3. The variables are measured without error
@@ -251,6 +251,6 @@ We were able to get within 2 thousandths of the accuracy of the full model with 
 
 With only 10,000 patient records to work with there is a chance this model has been biased towards a particular conclusion. For example in another set of patients a different pre-existing condition such as Anxiety may contribute more to total cost.
 
-## Recomendations
+## Recommendations
 
 Pay close attention to the complication risk, high blood pressure, and Hyperlipidemia in patients as well as how long they are projected to be in the hospital in order to calculate the cost of a visit.
