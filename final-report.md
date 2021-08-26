@@ -6,7 +6,7 @@ Using Multiple Linear Regression to predict Total Charge of a hospital stay
 
 ## Research question
 
-The of our research will be to build a model for predicting the total charge of a patient's stay at a hospital. We will look at patient demographics and health conditions to make this prediction.
+The purpose of our research will be to build a model for predicting the total charge of a patient's stay at a hospital. We will look at patient demographics and health conditions to make this prediction.
 
 We're making the assumption that the data we are using is clean and valid.
 
